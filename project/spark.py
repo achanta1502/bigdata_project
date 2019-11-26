@@ -2,9 +2,12 @@ from pyspark import SparkConf, SparkContext
 from pyspark.streaming import StreamingContext
 from pyspark.sql import SQLContext, SparkSession
 from pyspark.streaming.kafka import KafkaUtils
-from elasticsearch import Elasticsearch
+from model import pipeline
+from es import send_acc_to_es, send_loc_to_es
 
 import argparse
+import json
+import geopy
 
 IP = 'localhost'
 PORT = '9092'
@@ -28,9 +31,7 @@ def connection():
     # create the Streaming Context from spark context with interval size 2 seconds
     ssc = StreamingContext(sc, 1)
     ssc.checkpoint("checkpoint_TwitterApp")
-    # creating an elastic search port for data to be sent to kibana
-    es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
-    return ssc, es
+    return ssc
 
 
 def get_sql_context_instance(sparkContext):
@@ -45,21 +46,34 @@ def get_spark_session_instance(sparkContext):
     return globals()['sparkSessionSingletonInstance']
 
 
-def process(time, rdd):
-    print("===========%s=========" % str(time))
+def process(rdd):
+    print("entered")
     try:
         #process the rdd
-        pass
+        tweets = list(rdd)
+        for i in tweets:
+            print(i.get('text').encode("ascii", "ignore"))
+            loc = i.get('user').get('location')
+            print(loc)
+            locator = geopy.Nominatim(user_agent="MyGeocoder")
+            location = locator.geocode(loc)
+            print("location points " + str(location.latitude) + ", " +str(location.longitude))
+            # print(i.get('text').encode('ascii', 'ignore'))
+        # df = rdd.toDF()
+        # pd_df = df.toPandas()
+        # pd_df.columns = ["label", "review"]
+        # acc = pipeline(pd_df)
+        # send_acc_to_es(acc)
     except Exception as e:
         print(e)
         pass
 
 def start():
     # create config and start streaming
-    ssc, es = connection()
+    ssc = connection()
     kafka_stream = KafkaUtils.createDirectStream(ssc, [TOPIC], {"metadata.broker.list": "localhost:9092"})
-    kafka_stream.foreachRDD(process)
-    # your processing here
+    data = kafka_stream.map(lambda x: json.loads(x[1]))
+    data.foreachRDD(lambda x: x.foreachPartition(lambda y: process(y)))
     ssc.start()
     ssc.awaitTermination()
 
