@@ -8,7 +8,7 @@ import pickle
 import argparse
 
 
-HASH_TAG = ''
+HASH_TAG = []
 TOPIC = ''
 
 IP = 'localhost'
@@ -62,17 +62,20 @@ class MyStreamListener(StreamListener):
 def stream():
     set_kafka()
     my_stream = Stream(auth=authenticate(), listener=MyStreamListener())
-    my_stream.filter(track=HASH_TAG)
+    my_stream.filter(languages=['en'], track=HASH_TAG)
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('--hashtag', default='#accident', dest='hashtag',
+    parser = argparse.ArgumentParser(description='Process tweets from twitter and stream them through kafka topic.')
+    parser.add_argument('--hashtag', default='#traffic', dest='hashtag',
                         help='hashtag of the twitter app to retrieve tweets')
     parser.add_argument('--topic', default='twitter', dest='topic',
                         help='topic where kakfa can publish messages')
 
     args = parser.parse_args()
-    HASH_TAG = args.hashtag
+    HASH_TAG.append(args.hashtag)
+    HASH_TAG.append('#accidents')
+    HASH_TAG.append('#collision')
+    HASH_TAG.append('#crash')
     TOPIC = args.topic
     stream()

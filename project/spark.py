@@ -65,7 +65,7 @@ def start():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser(description='subscribe to topic and analyze the data')
     parser.add_argument('--topic', default='twitter', dest='topic',
                         help='topic where kakfa can publish messages')
 
