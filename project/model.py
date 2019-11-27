@@ -12,8 +12,8 @@ from os import path
 import pickle
 import pandas as pd
 
-modelpath = '/home/achanta/Desktop/model.sav'
-vectorpath = '/home/achanta/Desktop/vector.sav'
+modelpath = 'model.sav'
+vectorpath = 'vector.sav'
 
 # model = LogisticRegression(solver='newton-cg', multi_class='multinomial')
 # model = MultinomialNB()
@@ -34,8 +34,8 @@ port = PorterStemmer()
 
 
 def data_from_text():
-    df = pd.read_csv("/home/achanta/Desktop/output.csv", delimiter=',', header=None)
-    df.columns = ['review', 'label']
+    df = pd.read_csv("Data/2CVTweets/Seattle.csv", delimiter=';', header=None)
+    df.columns = ['number', 'text', 'label']
     return df
 
 
@@ -115,28 +115,24 @@ def vector_fit_transform(train, test):
 
 def train_test(df, size):
     train, test = train_test_split(df, test_size=size)
-    X_train = train.loc[:, 'review'].values
+    X_train = train.loc[:, 'text'].values
     Y_train = train.loc[:, 'label'].values
-    X_test = test.loc[:, 'review'].values
+    X_test = test.loc[:, 'text'].values
     Y_test = test.loc[:, 'label'].values
     return X_train, Y_train, X_test, Y_test
 
 
 def test_data(df):
-    X_test = df.loc[:, 'review'].values
+    X_test = df.loc[:, 'text'].values
     x_test = [str(x) for x in X_test]
-    Y_test = df.loc[:, 'label'].values
-    y_test = [int(x) for x in Y_test]
-    return x_test, y_test
+    return x_test
 
 
 def pipeline(df):
-    features, output = test_data(df)
+    features = test_data(df)
     test_vectors = transform(features)
     predicted = predict(test_vectors)
     res = {
-        "accuracy": accuracy(predicted, output),
-        "output": output,
         "predicted": predicted.flatten().tolist()
     }
     return res
