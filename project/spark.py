@@ -3,7 +3,7 @@ from pyspark.streaming import StreamingContext
 from pyspark.sql import SQLContext, SparkSession
 from pyspark.streaming.kafka import KafkaUtils
 from model import pipeline
-from es import send_acc_to_es, send_loc_to_es
+from elasticsearch import Elasticsearch
 
 import argparse
 import json
@@ -46,21 +46,61 @@ def get_spark_session_instance(sparkContext):
     return globals()['sparkSessionSingletonInstance']
 
 
+def elastic_search():
+    return Elasticsearch([{'host': 'localhost', 'port': 9200}])
+
+
+def send_loc_to_es(data):
+    es = elastic_search()
+    if not es.indices.exists(index="location"):
+        datatype = {
+            "mappings": {
+                "request-info": {
+                    "properties": {
+                        "tweet": {
+                          "type": "text"
+                        },
+                        "location": {
+                            "type": "geo_point"
+                        }
+                    }
+                }
+            }
+        }
+        es.indices.create(index="location", body=datatype)
+    es.index(index="location", doc_type="request-info", body=data)
+
+
 def process(rdd):
     print("entered")
     try:
         #process the rdd
         tweets = list(rdd)
-        for i in tweets:
-            print(i.get('text').encode("ascii", "ignore"))
-            loc = i.get('user').get('location')
+        for tweet in tweets:
+            print(tweet.get('text').encode("ascii", "ignore"))
+            tweet_text = tweet.get('text').encode("ascii", "ignore")
+            # tweet_df = tweet_text.toDF()
+            # pd_df = tweet_df.toPandas()
+            # pd_df.columns = ["text"]
+            # print(pd_df)
+            #acc = pipeline(pd_df)
+            loc = tweet.get('user').get('location')
             print(loc)
+            if loc is None:
+                continue
             locator = geopy.Nominatim(user_agent="MyGeocoder")
             location = locator.geocode(loc)
             print("location points " + str(location.latitude) + ", " +str(location.longitude))
+            data = {
+                "tweet": tweet_text,
+                "location": {
+                    "lat": location.latitude,
+                    "lon": location.longitude
+                }
+            }
+            print(data)
+            send_loc_to_es(data)
             # print(i.get('text').encode('ascii', 'ignore'))
-        # df = rdd.toDF()
-        # pd_df = df.toPandas()
         # pd_df.columns = ["label", "review"]
         # acc = pipeline(pd_df)
         # send_acc_to_es(acc)

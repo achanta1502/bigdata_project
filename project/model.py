@@ -12,8 +12,8 @@ from os import path
 import pickle
 import pandas as pd
 
-modelpath = '/home/achanta/Desktop/model.sav'
-vectorpath = '/home/achanta/Desktop/vector.sav'
+modelpath = 'model.sav'
+vectorpath = 'vector.sav'
 
 # model = LogisticRegression(solver='newton-cg', multi_class='multinomial')
 # model = MultinomialNB()
