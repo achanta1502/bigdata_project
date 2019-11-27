@@ -8,6 +8,7 @@ from elasticsearch import Elasticsearch
 import argparse
 import json
 import geopy
+import pandas as pd
 
 IP = 'localhost'
 PORT = '9092'
@@ -62,6 +63,9 @@ def send_loc_to_es(data):
                         },
                         "location": {
                             "type": "geo_point"
+                        },
+                        "analysis": {
+                            "type": "text"
                         }
                     }
                 }
@@ -79,31 +83,26 @@ def process(rdd):
         for tweet in tweets:
             print(tweet.get('text').encode("ascii", "ignore"))
             tweet_text = tweet.get('text').encode("ascii", "ignore")
-            # tweet_df = tweet_text.toDF()
-            # pd_df = tweet_df.toPandas()
-            # pd_df.columns = ["text"]
+            df = pd.DataFrame({'text': str(tweet_text)}, index=[0])
             # print(pd_df)
-            #acc = pipeline(pd_df)
+            acc = pipeline(df)
             loc = tweet.get('user').get('location')
             print(loc)
             if loc is None:
                 continue
             locator = geopy.Nominatim(user_agent="MyGeocoder")
             location = locator.geocode(loc)
-            print("location points " + str(location.latitude) + ", " +str(location.longitude))
+            print("location points " + str(location.latitude) + ", " + str(location.longitude))
             data = {
                 "tweet": tweet_text,
                 "location": {
                     "lat": location.latitude,
                     "lon": location.longitude
-                }
+                },
+                "analysis": acc
             }
             print(data)
             send_loc_to_es(data)
-            # print(i.get('text').encode('ascii', 'ignore'))
-        # pd_df.columns = ["label", "review"]
-        # acc = pipeline(pd_df)
-        # send_acc_to_es(acc)
     except Exception as e:
         print(e)
         pass
