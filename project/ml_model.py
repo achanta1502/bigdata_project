@@ -11,9 +11,10 @@ from sklearn.naive_bayes import MultinomialNB
 from os import path
 import pickle
 import pandas as pd
+import re
 
-modelpath = 'model.sav'
-vectorpath = 'vector.sav'
+modelpath = '/home/achanta/Desktop/model.sav'
+vectorpath = '/home/achanta/Desktop/vector.sav'
 
 # model = LogisticRegression(solver='newton-cg', multi_class='multinomial')
 # model = MultinomialNB()
@@ -22,9 +23,10 @@ model = MLPClassifier(activation='logistic', learning_rate='adaptive')
 
 
 def tokenize(text):
+    text = ''.join(re.sub("(@[A-Za-z0-9]+)|([^0-9A-Za-z \t]) (\w+:\ / \ / \S+)", "", text))
     tokens = set(word_tokenize(text))
     stop_words = stopwords_removal()
-    tokens = [w.lower() for w in tokens if not w in stop_words]
+    tokens = [w.lower() for w in tokens if w not in stop_words]
     stems = [porter(item) for item in tokens]
     return stems
 
@@ -34,7 +36,7 @@ port = PorterStemmer()
 
 
 def data_from_text():
-    df = pd.read_csv("Data/2CVTweets/Seattle.csv", delimiter=';', header=None)
+    df = pd.read_csv("/home/achanta/Desktop/bigdata_project/project/Data/2CVTweets/Seattle.csv", delimiter=';', header=None)
     df.columns = ['number', 'text', 'label']
     return df
 
@@ -132,10 +134,7 @@ def pipeline(df):
     features = test_data(df)
     test_vectors = transform(features)
     predicted = predict(test_vectors)
-    res = {
-        "predicted": predicted.flatten().tolist()
-    }
-    return res
+    return predicted[0]
 
 
 def model_start():

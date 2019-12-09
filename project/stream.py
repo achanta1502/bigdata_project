@@ -4,11 +4,14 @@ from tweepy import OAuthHandler
 from tweepy.streaming import StreamListener
 from kafka import KafkaProducer
 
+import csv
 import pickle
 import argparse
+import json
+import time
 
 
-HASH_TAG = []
+HASH_TAG = ['']
 TOPIC = ''
 
 IP = 'localhost'
@@ -19,7 +22,7 @@ ACCESS_TOKEN = ''
 ACCESS_SECRET = ''
 CONSUMER_KEY = ''
 CONSUMER_SECRET = ''
-
+TWITTER_CSV = '/home/achanta/Desktop/twitter2.csv'
 
 def set_kafka():
     global producer
@@ -63,19 +66,45 @@ def stream():
     set_kafka()
     my_stream = Stream(auth=authenticate(), listener=MyStreamListener())
     my_stream.filter(languages=['en'], track=HASH_TAG)
+    my_stream.sample()
+
+
+def csv_data():
+    set_kafka()
+    with open(TWITTER_CSV, 'r') as file:
+        reader = csv.reader(file, delimiter=';')
+        for row in reader:
+            loc = None
+            if len(row) > 1 and len(row[1]) != 0:
+                loc = row[1]
+            data = {
+                'text': row[0],
+                'user': {
+                    'location': loc
+                }
+            }
+            print(data)
+            publish_message(TOPIC, json.dumps(data))
+            time.sleep(2)
+
+
+def publish_message(topic_name, value):
+    try:
+        producer.send(topic_name, key='foo'.encode('utf-8'), value=value.encode('utf-8'))
+        producer.flush()
+    except Exception as e:
+        print('Exception in publishing message')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process tweets from twitter and stream them through kafka topic.')
-    parser.add_argument('--hashtag', default='#traffic', dest='hashtag',
+    parser.add_argument('--hashtag', default='accident', dest='hashtag',
                         help='hashtag of the twitter app to retrieve tweets')
     parser.add_argument('--topic', default='twitter', dest='topic',
                         help='topic where kakfa can publish messages')
 
     args = parser.parse_args()
     HASH_TAG.append(args.hashtag)
-    HASH_TAG.append('#accidents')
-    HASH_TAG.append('#collision')
-    HASH_TAG.append('#crash')
     TOPIC = args.topic
     stream()
+    # csv_data()
